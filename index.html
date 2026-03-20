@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>網紅收益模擬器｜新聞互動數據圖</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入 FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        
+        body { 
+            font-family: 'Noto Sans TC', 'PingFang TC', 'Microsoft JhengHei', sans-serif; 
+            background-color: #F8F9FA; /* 柔和的米灰背景 */
+            color: #1F2937; 
+        }
+        
+        /* 簡約版滑桿樣式 */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            background: #FFFFFF;
+            border: 2px solid #4F46E5; /* Indigo-600 */
+            cursor: pointer;
+            margin-top: -10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:active {
+            transform: scale(1.1);
+            background: #EEF2FF;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 6px;
+            cursor: pointer;
+            background: #E5E7EB;
+            border-radius: 4px;
+        }
+        
+        /* 品牌顏色 */
+        .ig-gradient {
+            background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        }
+        .ig-text {
+            background: linear-gradient(45deg, #e6683c, #bc1888);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .yt-red { background-color: #FF0000; }
+        .yt-text { color: #FF0000; }
+        
+        /* 卡片共用樣式 */
+        .clean-card {
+            background: #FFFFFF;
+            border-radius: 20px;
+            border: 1px solid #F3F4F6;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+            transition: box-shadow 0.3s ease;
+        }
+        .clean-card:hover {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 md:p-8">
+
+    <div class="max-w-6xl mx-auto space-y-8">
+        
+        <!-- Header 標題區塊 -->
+        <div class="clean-card p-8 flex flex-col md:flex-row items-center justify-between relative overflow-hidden">
+            <!-- 左側裝飾線 -->
+            <div class="absolute top-0 left-0 w-2 h-full bg-indigo-500"></div>
+            
+            <div class="flex-1">
+                <div class="text-indigo-600 font-bold tracking-wider text-sm mb-2 uppercase">Interactive Data</div>
+                <h1 class="text-3xl md:text-4xl font-black text-gray-900 mb-3 tracking-tight">
+                    網紅收益模擬器：流量如何變現？
+                </h1>
+                <p class="text-gray-500 text-sm md:text-base leading-relaxed max-w-2xl">
+    
+                    透過調整下方參數，探索不同平台特性下，創作者需要具備什麼條件才能達到預期的收入。
+                </p>
+            </div>
+            
+            <div class="mt-6 md:mt-0 flex flex-col items-center bg-gray-50 px-6 py-4 rounded-2xl border border-gray-100">
+                <span class="text-xs text-gray-500 font-medium mb-1">社群影響力評級</span>
+                <span id="creatorTier" class="text-xl font-bold text-indigo-700 bg-indigo-100 px-4 py-1 rounded-full">
+                    素人
+                </span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- 左側：參數調整區 -->
+            <div class="lg:col-span-5 space-y-6">
+                <div class="clean-card p-8">
+                    <h2 class="text-xl font-bold mb-8 text-gray-800 flex items-center">
+                        <i class="fa-solid fa-sliders text-indigo-500 mr-2"></i> 設定受眾參數
+                    </h2>
+                    
+                    <!-- 粉絲數 -->
+                    <div class="mb-8">
+                        <div class="flex justify-between items-baseline mb-3">
+                            <label class="text-sm font-bold text-gray-700">總粉絲 / 訂閱數</label>
+                            <span id="followersVal" class="text-xl text-indigo-600 font-black">10,000</span>
+                        </div>
+                        <input type="range" id="followers" min="1000" max="1000000" step="1000" value="10000">
+                        <div class="flex justify-between text-xs text-gray-400 mt-2 font-medium">
+                            <span>1,000 (奈米)</span>
+                            <span>1,000,000 (百萬)</span>
+                        </div>
+                    </div>
+
+                    <!-- 互動率 -->
+                    <div class="mb-8">
+                        <div class="flex justify-between items-baseline mb-3">
+                            <label class="text-sm font-bold text-gray-700">互動率 <span class="text-xs text-gray-400 font-normal ml-1">(按讚+留言/粉絲)</span></label>
+                            <span id="engagementVal" class="text-xl text-emerald-500 font-black">3.0%</span>
+                        </div>
+                        <input type="range" id="engagement" min="0.5" max="15.0" step="0.1" value="3.0">
+                        <div class="flex justify-between text-xs text-gray-400 mt-2 font-medium">
+                            <span>低迷 (<2%)</span>
+                            <span>極高 (>5% 報價加成)</span>
+                        </div>
+                    </div>
+
+                    <!-- 觀看量 -->
+                    <div class="mb-8">
+                        <div class="flex justify-between items-baseline mb-3">
+                            <label class="text-sm font-bold text-gray-700">單篇平均觀看量</label>
+                            <span id="viewsVal" class="text-xl text-purple-600 font-black">5,000</span>
+                        </div>
+                        <input type="range" id="views" min="500" max="2000000" step="500" value="5000">
+                        <p class="text-xs text-gray-500 mt-2 bg-gray-50 p-2 rounded-lg"><i class="fa-solid fa-circle-info mr-1 text-gray-400"></i> YT 的業配與廣告收益極度依賴實際觀看量。</p>
+                    </div>
+
+                    <!-- 粉絲結構/受眾類型 -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-3">粉絲結構 (受眾含金量)</label>
+                        <select id="audienceType" class="w-full bg-gray-50 border border-gray-200 text-gray-800 py-3 px-4 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition cursor-pointer font-medium appearance-none">
+                            <option value="0.7">👨‍🎓 學生族群 (購買力偏低 / 娛樂、迷因)</option>
+                            <option value="1.0" selected>👨‍👩‍👧‍👦 一般大眾 (購買力中等 / 美食、生活)</option>
+                            <option value="1.5">💼 高含金量 (購買力極高 / 理財、科技)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- 戰略提示框 (新聞洞察) -->
+                <div class="bg-amber-50 border border-amber-200 p-5 rounded-2xl relative overflow-hidden">
+                    <div class="absolute -right-4 -top-4 text-amber-100 opacity-50 text-6xl">
+                        <i class="fa-solid fa-quote-right"></i>
+                    </div>
+                    <h3 class="text-amber-800 font-bold mb-2 flex items-center relative z-10">
+                        <i class="fa-solid fa-newspaper mr-2"></i> 記者洞察
+                    </h3>
+                    <p class="text-amber-900 text-sm leading-relaxed relative z-10 font-medium" id="tipsText">
+                        根據市場調查，若您的 IG 互動率高於 5%，在接業配時通常可以額外提高 20%~30% 的報價。品牌越來越看重真實互動，而非幽靈粉絲。
+                    </p>
+                </div>
+            </div>
+
+            <!-- 右側：收益報告區 -->
+            <div class="lg:col-span-7 space-y-6">
+                
+                <!-- 雙平台比較卡片 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- IG 收益預估 -->
+                    <div class="clean-card p-6 border-t-4 border-t-pink-500">
+                        <div class="flex items-center mb-6">
+                            <div class="w-12 h-12 rounded-xl ig-gradient flex items-center justify-center text-white mr-4 shadow-sm">
+                                <i class="fa-brands fa-instagram text-2xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">Instagram</h3>
+                                <p class="text-xs text-gray-500">圖文業配市場潛力</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <div class="text-sm text-gray-500 font-medium mb-1">單篇圖文報價參考</div>
+                                <div id="igPostPrice" class="text-2xl font-black ig-text">$0</div>
+                            </div>
+                            <div class="h-px w-full bg-gray-100"></div>
+                            <div>
+                                <div class="text-sm text-gray-500 font-medium mb-1">預估月收入 <span class="text-xs font-normal">(假設月接4檔)</span></div>
+                                <div id="igMonthly" class="text-3xl font-black text-gray-900">$0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- YT 收益預估 -->
+                    <div class="clean-card p-6 border-t-4 border-t-red-500">
+                        <div class="flex items-center mb-6">
+                            <div class="w-12 h-12 rounded-xl yt-red flex items-center justify-center text-white mr-4 shadow-sm">
+                                <i class="fa-brands fa-youtube text-2xl"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold text-gray-900">YouTube</h3>
+                                <p class="text-xs text-gray-500">影音廣告與業配潛力</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-4">
+                            <div>
+                                <div class="text-sm text-gray-500 font-medium mb-1">單支影片業配報價</div>
+                                <div id="ytSponsorPrice" class="text-2xl font-black yt-text">$0</div>
+                            </div>
+                            <div class="h-px w-full bg-gray-100"></div>
+                            <div>
+                                <div class="text-sm text-gray-500 font-medium mb-1">預估月收入 <span class="text-xs font-normal">(含觀看廣告收益)</span></div>
+                                <div id="ytMonthly" class="text-3xl font-black text-gray-900">$0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 長條圖表區 -->
+                <div class="clean-card p-6 md:p-8">
+                    <div class="mb-6">
+                        <h3 class="text-lg font-bold text-gray-900">平台總月收入結構比較</h3>
+                        <p class="text-sm text-gray-500 mt-1">直觀對比兩大平台的變現能力差異</p>
+                    </div>
+                    <div class="h-72 w-full relative">
+                        <canvas id="revenueChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        
+        <!-- Footer 版權或說明 -->
+        <div class="text-center text-sm text-gray-400 pb-8">
+            * 本工具計算結果為依據市場公開數據之概算模型，實際報價會依創作者個人品牌價值、合約條款與廠商預算有所浮動。
+        </div>
+    </div>
+
+    <script>
+        // 格式化數字
+        const formatMoney = (num) => {
+            return new Intl.NumberFormat('zh-TW', { style: 'currency', currency: 'TWD', maximumFractionDigits: 0 }).format(num);
+        };
+        const formatNum = (num) => {
+            return new Intl.NumberFormat('zh-TW').format(num);
+        };
+
+        // DOM 元素
+        const inputs = ['followers', 'engagement', 'views', 'audienceType'];
+        const elements = {};
+        inputs.forEach(id => { elements[id] = document.getElementById(id); });
+
+        // 圖表初始化
+        let chart;
+        function initChart() {
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            
+            // 設定 Chart.js 全局字體
+            Chart.defaults.font.family = "'Noto Sans TC', 'PingFang TC', sans-serif";
+            Chart.defaults.color = '#6B7280'; // text-gray-500
+            
+            chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Instagram (圖文業配)', 'YouTube (影音業配+廣告)'],
+                    datasets: [{
+                        label: '預估月收入',
+                        data: [0, 0],
+                        backgroundColor: [
+                            'rgba(236, 72, 153, 0.85)', // Pink-500
+                            'rgba(239, 68, 68, 0.85)'   // Red-500
+                        ],
+                        hoverBackgroundColor: [
+                            'rgba(219, 39, 119, 1)',   // Pink-600
+                            'rgba(220, 38, 38, 1)'     // Red-600
+                        ],
+                        borderRadius: 6,
+                        barPercentage: 0.6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                            titleColor: '#1F2937',
+                            bodyColor: '#1F2937',
+                            borderColor: '#E5E7EB',
+                            borderWidth: 1,
+                            padding: 12,
+                            boxPadding: 6,
+                            titleFont: { size: 14, weight: 'bold' },
+                            bodyFont: { size: 14 },
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + formatMoney(context.raw);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { 
+                                color: 'rgba(0, 0, 0, 0.04)',
+                                drawBorder: false
+                            },
+                            ticks: {
+                                padding: 10,
+                                callback: function(value) {
+                                    return 'NT$ ' + (value/10000 >= 1 ? (value/10000) + '萬' : value);
+                                }
+                            }
+                        },
+                        x: {
+                            grid: { display: false, drawBorder: false },
+                            ticks: {
+                                font: { weight: 'bold', size: 13 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // 判斷等級
+        function getTier(followers) {
+            if (followers < 5000) return '奈米網紅';
+            if (followers < 50000) return '微型網紅';
+            if (followers < 100000) return '中型網紅';
+            if (followers < 500000) return '大型網紅';
+            return '頂流 KOL';
+        }
+
+        // 核心計算邏輯
+        function calculate() {
+            const f = parseInt(elements.followers.value);
+            const e = parseFloat(elements.engagement.value);
+            const v = parseInt(elements.views.value);
+            const a = parseFloat(elements.audienceType.value);
+
+            // 更新顯示數值
+            document.getElementById('followersVal').innerText = formatNum(f);
+            document.getElementById('engagementVal').innerText = e.toFixed(1) + '%';
+            document.getElementById('viewsVal').innerText = formatNum(v);
+            document.getElementById('creatorTier').innerText = getTier(f);
+
+            // --- IG 計算模型 ---
+            let igBase = 0;
+            if (f <= 5000) igBase = 2000;
+            else if (f <= 50000) igBase = 10000;
+            else if (f <= 100000) igBase = 25000;
+            else if (f <= 500000) igBase = 45000;
+            else igBase = Math.floor(f / 10000) * 1500; // 50萬以上依比例上調
+
+            // 互動率加成 (大於 5% 增加報價)
+            let engMultiplier = 1.0;
+            if (e < 2.0) engMultiplier = 0.8;
+            else if (e >= 5.0) engMultiplier = 1.25;
+
+            // IG 單篇業配 (受眾含金量 * 互動加成 * 基礎)
+            const igPost = Math.round(igBase * engMultiplier * a);
+            const igMonthlyRevenue = igPost * 4; // 假設每月接 4 篇
+
+            // --- YouTube 計算模型 ---
+            // 廣告收益 (CPM 預估)：台灣常見約 每千次觀看 50-80 台幣，依受眾變動
+            const ytAdRPM = 60 * a; 
+            // 假設一個月發 4 支影片
+            const ytMonthlyViews = v * 4;
+            const ytAdRevenue = (ytMonthlyViews / 1000) * ytAdRPM;
+
+            // YT 業配報價：以觀看量為主要依據 (常見約 0.5 - 1.5 元/觀看)
+            const ytSponsorMultiplier = e > 5.0 ? 1.2 : (e < 2.0 ? 0.8 : 1.0);
+            const ytSponsorBase = v * 0.8 * ytSponsorMultiplier * a; 
+            const ytSponsorVideo = Math.max(Math.round(ytSponsorBase), 3000 * a);
+            
+            const ytMonthlyRevenue = Math.round(ytAdRevenue + (ytSponsorVideo * 2)); // 假設一個月接 2 支 YT 業配
+
+            // 更新畫面
+            document.getElementById('igPostPrice').innerText = formatMoney(igPost);
+            document.getElementById('igMonthly').innerText = formatMoney(igMonthlyRevenue);
+            
+            document.getElementById('ytSponsorPrice').innerText = formatMoney(ytSponsorVideo);
+            document.getElementById('ytMonthly').innerText = formatMoney(ytMonthlyRevenue);
+
+            // 更新圖表
+            if(chart) {
+                chart.data.datasets[0].data = [igMonthlyRevenue, ytMonthlyRevenue];
+                chart.update();
+            }
+
+            // 更新記者洞察提示
+            const tipsEl = document.getElementById('tipsText');
+            if (e >= 5.0) {
+                tipsEl.innerHTML = `市場數據指出，<span class="text-amber-600 font-black">互動率達 ${e}%</span> 的帳號極具價值。品牌越來越偏好高黏著度的小眾網紅，這讓您的 IG 報價直接提升了約 25%。`;
+            } else if (a > 1.2) {
+                tipsEl.innerHTML = `雖然絕對流量不一定是最高，但您的受眾屬於<span class="text-amber-600 font-black">「高含金量」族群</span>。金融與科技品牌通常願意支付較高溢價來觸及這批具備強大購買力的粉絲。`;
+            } else if (f > 100000 && v < 10000) {
+                tipsEl.innerHTML = `粉絲數龐大但觀看量不成比例，這是業界常見的<span class="text-red-600 font-black">「流量轉換率警訊」</span>。YouTube 業配極度看重實際觀看數，建議優化影片企劃以拉抬點閱。`;
+            } else {
+                tipsEl.innerHTML = `根據《政大大學報》調查，入門級網紅（1-5千粉）單篇行情約NT$1,000-3,000；若能將互動率拉升至 5% 以上，將能有效跨越報價級距。`;
+            }
+        }
+
+        // 綁定事件
+        inputs.forEach(id => {
+            elements[id].addEventListener('input', calculate);
+        });
+
+        // 特別聯動：拉動粉絲數時，自動等比例調整平均觀看量
+        elements.followers.addEventListener('change', (e) => {
+            const f = parseInt(e.target.value);
+            let suggestedViews = Math.floor(f * 0.3);
+            if (suggestedViews < 500) suggestedViews = 500;
+            elements.views.value = suggestedViews;
+            calculate();
+        });
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            calculate();
+        });
+
+    </script>
+</body>
+</html>
+
+
